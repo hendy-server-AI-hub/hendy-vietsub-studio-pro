@@ -1,1 +1,34 @@
-(function(){if(window.__vietsubInjected){document.getElementById('__vietsubPanel').remove();window.__vietsubInjected=false;return}window.__vietsubInjected=true;var p=document.createElement('div');p.id='__vietsubPanel';p.style.cssText='position:fixed;bottom:16px;right:16px;width:360px;background:#1a1a2e;color:#e0e0e0;border-radius:12px;padding:16px;z-index:2147483647;box-shadow:0 8px 32px rgba(0,0,0,.5);font-family:system-ui,sans-serif';p.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:16px;color:#a29bfe;margin:0">Vietsub AI</h3><button id="__vietsubClose" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">x</button></div><div style="margin-bottom:8px"><input id="__vietsubUrl" type="text" placeholder="Link SRT..." style="width:100%;padding:6px;background:#0f0f1a;border:1px solid
+import HTML from './index.html';
+import BOOKMARKLET_JS from './bookmarklet.js';
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    // Workers AI translate - FREE, no API key
+    if (url.pathname === '/api/translate' && request.method === 'POST') {
+      try {
+        const { text } = await request.json();
+        const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+          messages: [
+            { role: 'system', content: 'You are a professional subtitle translator. Translate the following text to Vietnamese. Keep the meaning natural and cinematic. Only output the translation, nothing else.' },
+            { role: 'user', content: text }
+          ]
+        });
+        return Response.json({ translated: response.response.trim() });
+      } catch (e) {
+        return Response.json({ error: e.message }, { status: 500 });
+      }
+    }
+
+    if (url.pathname === '/bookmarklet.js') {
+      return new Response(BOOKMARKLET_JS, {
+        headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    return new Response(HTML, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    });
+  }
+};
